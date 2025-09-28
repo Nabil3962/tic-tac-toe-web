@@ -9,14 +9,9 @@ const drawsSpan = document.getElementById("draws");
 
 let currentPlayer = "X";
 let gameActive = true;
-let boardState = ["", "", "", "", "", "", "", "", ""];
+let boardState = Array(9).fill("");
 
-let scores = {
-    X: 0,
-    O: 0,
-    draws: 0
-};
-
+let scores = { X: 0, O: 0, draws: 0 };
 let gameMode = modeSelect.value; // "pvp" or "ai"
 
 // Create cells
@@ -31,6 +26,10 @@ for (let i = 0; i < 9; i++) {
 modeSelect.addEventListener("change", () => {
     gameMode = modeSelect.value;
     resetGame();
+    // If AI mode and X starts, trigger AI automatically if needed
+    if (gameMode === "ai" && currentPlayer === "O") {
+        aiMove();
+    }
 });
 
 function handleCellClick(e) {
@@ -41,14 +40,17 @@ function handleCellClick(e) {
     makeMove(index, currentPlayer);
 
     if (gameMode === "ai" && gameActive && currentPlayer === "O") {
-        // AI turn after a short delay
-        setTimeout(() => {
-            const aiMove = getAIMove();
-            if (aiMove !== null) {
-                makeMove(aiMove, "O");
-            }
-        }, 400);
+        aiMove();
     }
+}
+
+function aiMove() {
+    setTimeout(() => {
+        const aiIndex = getAIMove();
+        if (aiIndex !== null && gameActive) {
+            makeMove(aiIndex, "O");
+        }
+    }, 400); // short delay for realism
 }
 
 function makeMove(index, player) {
@@ -73,6 +75,11 @@ function makeMove(index, player) {
 
     currentPlayer = player === "X" ? "O" : "X";
     status.textContent = `Player ${currentPlayer}'s turn`;
+
+    // If AI mode and it's AI's turn, trigger AI move automatically
+    if (gameMode === "ai" && currentPlayer === "O" && gameActive) {
+        aiMove();
+    }
 }
 
 function checkWin(player) {
@@ -81,41 +88,27 @@ function checkWin(player) {
         [0,3,6],[1,4,7],[2,5,8], // cols
         [0,4,8],[2,4,6]          // diagonals
     ];
-
-    return winPatterns.some(pattern => {
-        return pattern.every(index => boardState[index] === player);
-    });
+    return winPatterns.some(pattern => pattern.every(i => boardState[i] === player));
 }
 
 function getAIMove() {
-    // Simple AI: pick a random empty cell
-    const emptyIndices = boardState
-        .map((val, idx) => val === "" ? idx : null)
-        .filter(idx => idx !== null);
-
-    if (emptyIndices.length === 0) return null;
-
-    // For a smarter AI, you can implement minimax here.
-    // For now, random choice:
-    const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    return randomIndex;
+    const empty = boardState.map((val, idx) => val === "" ? idx : null).filter(i => i !== null);
+    if (empty.length === 0) return null;
+    return empty[Math.floor(Math.random() * empty.length)];
 }
 
 function updateScores(winner) {
-    if (winner === "X") {
-        scores.X++;
-        xWinsSpan.textContent = scores.X;
-    } else if (winner === "O") {
-        scores.O++;
-        oWinsSpan.textContent = scores.O;
-    } else if (winner === "draw") {
-        scores.draws++;
-        drawsSpan.textContent = scores.draws;
-    }
+    if (winner === "X") scores.X++;
+    else if (winner === "O") scores.O++;
+    else if (winner === "draw") scores.draws++;
+
+    xWinsSpan.textContent = scores.X;
+    oWinsSpan.textContent = scores.O;
+    drawsSpan.textContent = scores.draws;
 }
 
 function resetGame() {
-    boardState = ["", "", "", "", "", "", "", "", ""];
+    boardState.fill("");
     currentPlayer = "X";
     gameActive = true;
     status.textContent = "Player X's turn";
@@ -124,9 +117,11 @@ function resetGame() {
         cell.textContent = "";
         cell.classList.remove("taken");
     });
+
+    // If AI mode and O starts first (optional), trigger AI
+    if (gameMode === "ai" && currentPlayer === "O") {
+        aiMove();
+    }
 }
 
 restartBtn.addEventListener("click", resetGame);
-
-// Initialize status text
-status.textContent = "Player X's turn";
