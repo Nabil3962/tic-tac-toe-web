@@ -2,9 +2,19 @@ const board = document.getElementById("game-board");
 const status = document.getElementById("status");
 const restartBtn = document.getElementById("restart-btn");
 
+const xWinsSpan = document.getElementById("x-wins");
+const oWinsSpan = document.getElementById("o-wins");
+const drawsSpan = document.getElementById("draws");
+
 let currentPlayer = "X";
 let gameActive = true;
 let boardState = ["", "", "", "", "", "", "", "", ""];
+
+let scores = {
+    X: 0,
+    O: 0,
+    draws: 0
+};
 
 // Create cells
 for (let i = 0; i < 9; i++) {
@@ -27,12 +37,14 @@ function handleCellClick(e) {
     if (checkWin()) {
         status.textContent = `Player ${currentPlayer} Wins! 🎉`;
         gameActive = false;
+        updateScores(currentPlayer);
         return;
     }
 
     if (!boardState.includes("")) {
         status.textContent = "It's a Draw! 😮";
         gameActive = false;
+        updateScores("draw");
         return;
     }
 
@@ -50,6 +62,19 @@ function checkWin() {
     return winPatterns.some(pattern => {
         return pattern.every(index => boardState[index] === currentPlayer);
     });
+}
+
+function updateScores(winner) {
+    if (winner === "X") {
+        scores.X++;
+        xWinsSpan.textContent = scores.X;
+    } else if (winner === "O") {
+        scores.O++;
+        oWinsSpan.textContent = scores.O;
+    } else if (winner === "draw") {
+        scores.draws++;
+        drawsSpan.textContent = scores.draws;
+    }
 }
 
 restartBtn.addEventListener("click", () => {
