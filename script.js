@@ -12,7 +12,7 @@ let gameActive = true;
 let boardState = Array(9).fill("");
 
 let scores = { X: 0, O: 0, draws: 0 };
-let gameMode = modeSelect.value; // "pvp" or "ai"
+let gameMode = modeSelect.value;
 
 // Create cells
 for (let i = 0; i < 9; i++) {
@@ -28,43 +28,38 @@ modeSelect.addEventListener("change", () => {
     resetGame();
 });
 
-// Handle human clicks
+// Handle player click
 function handleCellClick(e) {
-    const index = e.target.dataset.index;
+    const index = parseInt(e.target.dataset.index);
 
     if (!gameActive) return;
     if (boardState[index] !== "") return;
-    if (gameMode === "ai" && currentPlayer === "O") return; // prevent clicking during AI turn
+    if (gameMode === "ai" && currentPlayer === "O") return; // Prevent clicking during AI turn
 
-    playerMove(index);
-}
-
-function playerMove(index) {
     makeMove(index, currentPlayer);
 
-    // If PvC and game still active, trigger AI after human move
+    // AI turn after player move
     if (gameMode === "ai" && gameActive) {
-        currentPlayer = "O"; // explicitly set AI as current
+        currentPlayer = "O";
         status.textContent = `Player ${currentPlayer}'s turn`;
 
         setTimeout(() => {
-            const aiIndex = getAIMove();
+            const aiIndex = getBestMove(boardState);
             if (aiIndex !== null && gameActive) {
                 makeMove(aiIndex, "O");
                 if (gameActive) {
-                    currentPlayer = "X"; // back to human
+                    currentPlayer = "X";
                     status.textContent = `Player ${currentPlayer}'s turn`;
                 }
             }
         }, 400);
-    } else {
-        // PvP: just switch turn
+    } else if (gameActive) {
+        // PvP turn switch
         currentPlayer = currentPlayer === "X" ? "O" : "X";
         status.textContent = `Player ${currentPlayer}'s turn`;
     }
 }
 
-// Perform a move for any player
 function makeMove(index, player) {
     boardState[index] = player;
     const cell = board.querySelector(`.cell[data-index='${index}']`);
@@ -86,7 +81,7 @@ function makeMove(index, player) {
     }
 }
 
-// Win checking
+// Check win
 function checkWin(player) {
     const winPatterns = [
         [0,1,2],[3,4,5],[6,7,8],
@@ -96,14 +91,7 @@ function checkWin(player) {
     return winPatterns.some(pattern => pattern.every(i => boardState[i] === player));
 }
 
-// Simple AI: random empty cell
-function getAIMove() {
-    const empty = boardState.map((val, idx) => val === "" ? idx : null).filter(i => i !== null);
-    if (empty.length === 0) return null;
-    return empty[Math.floor(Math.random() * empty.length)];
-}
-
-// Update scoreboard
+// Scoreboard
 function updateScores(winner) {
     if (winner === "X") scores.X++;
     else if (winner === "O") scores.O++;
@@ -114,7 +102,6 @@ function updateScores(winner) {
     drawsSpan.textContent = scores.draws;
 }
 
-// Reset game
 function resetGame() {
     boardState.fill("");
     currentPlayer = "X";
@@ -128,3 +115,62 @@ function resetGame() {
 }
 
 restartBtn.addEventListener("click", resetGame);
+
+// -------------------------
+// Minimax AI for Tic Tac Toe
+// -------------------------
+function getBestMove(board) {
+    let bestScore = -Infinity;
+    let move = null;
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === "") {
+            board[i] = "O";
+            let score = minimax(board, 0, false);
+            board[i] = "";
+            if (score > bestScore) {
+                bestScore = score;
+                move = i;
+            }
+        }
+    }
+    return move;
+}
+
+function minimax(board, depth, isMaximizing) {
+    if (checkWinBoard(board, "O")) return 10 - depth;
+    if (checkWinBoard(board, "X")) return depth - 10;
+    if (!board.includes("")) return 0;
+
+    if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === "") {
+                board[i] = "O";
+                let score = minimax(board, depth + 1, false);
+                board[i] = "";
+                bestScore = Math.max(score, bestScore);
+            }
+        }
+        return bestScore;
+    } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === "") {
+                board[i] = "X";
+                let score = minimax(board, depth + 1, true);
+                board[i] = "";
+                bestScore = Math.min(score, bestScore);
+            }
+        }
+        return bestScore;
+    }
+}
+
+function checkWinBoard(board, player) {
+    const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
+    return winPatterns.some(pattern => pattern.every(i => board[i] === player));
+}
