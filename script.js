@@ -23,34 +23,29 @@ for (let i = 0; i < 9; i++) {
     board.appendChild(cell);
 }
 
+// Handle mode change
 modeSelect.addEventListener("change", () => {
     gameMode = modeSelect.value;
     resetGame();
-    // If AI mode and X starts, trigger AI automatically if needed
-    if (gameMode === "ai" && currentPlayer === "O") {
-        aiMove();
-    }
 });
 
 function handleCellClick(e) {
     const index = e.target.dataset.index;
 
-    if (boardState[index] !== "" || !gameActive) return;
+    // Ignore clicks if cell is taken, game over, or not player's turn in PvC
+    if (!gameActive) return;
+    if (boardState[index] !== "") return;
+    if (gameMode === "ai" && currentPlayer === "O") return;
 
     makeMove(index, currentPlayer);
 
+    // Trigger AI after human move
     if (gameMode === "ai" && gameActive && currentPlayer === "O") {
-        aiMove();
+        setTimeout(() => {
+            const aiIndex = getAIMove();
+            if (aiIndex !== null) makeMove(aiIndex, "O");
+        }, 400);
     }
-}
-
-function aiMove() {
-    setTimeout(() => {
-        const aiIndex = getAIMove();
-        if (aiIndex !== null && gameActive) {
-            makeMove(aiIndex, "O");
-        }
-    }, 400); // short delay for realism
 }
 
 function makeMove(index, player) {
@@ -59,6 +54,7 @@ function makeMove(index, player) {
     cell.textContent = player;
     cell.classList.add("taken");
 
+    // Check win
     if (checkWin(player)) {
         status.textContent = `Player ${player} Wins! 🎉`;
         gameActive = false;
@@ -66,6 +62,7 @@ function makeMove(index, player) {
         return;
     }
 
+    // Check draw
     if (!boardState.includes("")) {
         status.textContent = "It's a Draw! 😮";
         gameActive = false;
@@ -73,13 +70,9 @@ function makeMove(index, player) {
         return;
     }
 
+    // Switch turns
     currentPlayer = player === "X" ? "O" : "X";
     status.textContent = `Player ${currentPlayer}'s turn`;
-
-    // If AI mode and it's AI's turn, trigger AI move automatically
-    if (gameMode === "ai" && currentPlayer === "O" && gameActive) {
-        aiMove();
-    }
 }
 
 function checkWin(player) {
@@ -117,11 +110,6 @@ function resetGame() {
         cell.textContent = "";
         cell.classList.remove("taken");
     });
-
-    // If AI mode and O starts first (optional), trigger AI
-    if (gameMode === "ai" && currentPlayer === "O") {
-        aiMove();
-    }
 }
 
 restartBtn.addEventListener("click", resetGame);
